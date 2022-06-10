@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Marca;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class MarcaController extends Controller
 {
@@ -105,19 +106,14 @@ class MarcaController extends Controller
             }
 
             $request->validate($regrasDinamicas, $marca->feedback());
-
-            $imagem = $request->file('imagem');
-            $img_urn = $imagem->store('imagens', 'public');
-
-            $marca->update([
-                'nome' => $request->nome,
-                'imagem' => $img_urn
-            ]);
-
-            return $marca;
+        } else {
+            $request->validate($marca->rules(), $marca->feedback());
         }
 
-        $request->validate($marca->rules(), $marca->feedback());
+        //remove o arquivo antigo caso um novo tenha sido enviado
+        if ($request->file('imagem')) {
+            Storage::disk('public')->delete($marca->imagem);
+        }
 
         $imagem = $request->file('imagem');
         $img_urn = $imagem->store('imagens', 'public');
@@ -139,6 +135,8 @@ class MarcaController extends Controller
     public function destroy($id)
     {
         $marca = $this->marca->find($id);
+        Storage::disk('public')->delete($marca->imagem);
+
         if ($marca === null) {
             return response()->json(
                 ['erro' => 'Impossivel realizar a atualização, o recurso ' . $id . ' não existe'],
